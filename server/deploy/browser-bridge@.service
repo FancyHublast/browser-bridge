@@ -1,0 +1,50 @@
+[Unit]
+Description=Browser Bridge WebSocket 服务（实例 %i）
+Documentation=file:/opt/browser-bridge/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=browserbridge
+Group=browserbridge
+WorkingDirectory=/opt/browser-bridge
+
+# %i 是实例名（通常用用户名）。每个实例读自己的配置，端口与 token 互不相同。
+# 配置文件放 /etc/browser-bridge/<实例名>.json
+#
+# ⚠️ 为什么默认只用 --ws-only：
+#    这个实例的职责只是「接住扩展的 WebSocket」。agent 侧一般跑在用户自己机器上，
+#    通过本机服务走 stdio。只有在确实要「远程 agent 直连服务器」时才加 --http，
+#    而加了 --http 就必须在 nginx 后面再叠一层认证，否则内网谁扫到端口谁就能控制浏览器。
+ExecStart=/opt/browser-bridge/server/.venv/bin/python \
+    /opt/browser-bridge/server/mcp_server.py \
+    --config /etc/browser-bridge/%i.json \
+    --ws-only
+
+Restart=always
+RestartSec=3
+# 退出太频繁（比如配置写错端口被占）时不要无限重启，留出排查空间
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# ── 加固：这个服务只需要网络与自己的工作目录，别的都不该碰 ──
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+# 截图与元素库要写盘，单独放开这个目录
+ReadWritePaths=/var/lib/browser-bridge
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=browser-bridge-%i
+
+[Install]
+WantedBy=multi-user.target

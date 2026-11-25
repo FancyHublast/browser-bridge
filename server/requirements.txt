@@ -1,0 +1,12 @@
+# Browser Bridge · 服务端依赖
+#
+# 两个包，都是纯 Python，不需要编译工具链：
+#   websockets —— 与 Chrome 插件之间的长连接
+#   mcp        —— 暴露给 agent 的工具协议（官方 Python SDK）
+#
+# 安装：
+#   python -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+
+websockets>=12.0
+mcp>=1.2.0

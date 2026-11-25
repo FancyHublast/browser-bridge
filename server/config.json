@@ -1,0 +1,12 @@
+{
+  "host": "127.0.0.1",
+  "port": 8765,
+  "token": "",
+  "heartbeat_seconds": 20,
+  "call_timeout_seconds": 60,
+  "max_message_mb": 64,
+  "screenshot_dir": "shots",
+  "log_level": "INFO",
+  "http_host": "127.0.0.1",
+  "http_port": 8766
+}

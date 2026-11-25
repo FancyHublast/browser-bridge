@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  browser-bridge — Chrome 私有更新清单（update manifest）
+
+  用途：让 Chrome 知道「这个扩展的最新版在哪、版本号是多少」。
+  配合 ExtensionInstallForcelist 策略，同事的 Chrome 会自动下载、
+  自动安装、自动更新，全程无需用户操作。
+
+  部署位置：web 服务器的 /var/www/updates/browser-bridge.xml
+  配套文件：同目录下的 browser-bridge.crx
+
+  版本号必须与 extension/manifest.json 里的 version 完全一致，
+  否则 Chrome 会认为「没有更新」而不拉取。
+
+  签名用 browser-bridge-extension-key.pem（生成扩展 ID 时的那把），
+  ID 必须与 manifest.json 的 key 推出来的 ID 相同，否则 Chrome 拒绝安装。
+-->
+<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+  <app appid='ejajjndahiklljjjpnmefhmbinaegkdc'>
+    <updatecheck
+      codebase='https://bridge.yourcompany.com/updates/browser-bridge.crx'
+      version='1.3.4' />
+  </app>
+</gupdate>

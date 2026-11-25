@@ -1,0 +1,58 @@
+Windows Registry Editor Version 5.00
+
+; ─────────────────────────────────────────────────────────────────────
+; browser-bridge — Chrome policy template (Windows)
+;
+; 作用（一次导入同时解决两件事）：
+;   1. 强制静默安装扩展 —— 用户无法删除、无需手动加载
+;   2. 把 wsUrl / wsToken 下发给扩展 —— 用户零操作，也改不了
+;
+; 用法：改掉下面两处 CHANGE_ME，右键"以管理员身份运行"导入（或双击）。
+;       然后打开 chrome://policy 点 Reload policies，能看到本扩展 ID 即成功。
+;
+; 扩展 ID 已通过 manifest.json 的 key 字段固定，
+; 所以任何机器上都是同一个 ID —— 这正是企业策略能生效的前提。
+;
+; 注意：本文件刻意全部使用英文注释。regedit 对 UTF-8 中文注释的兼容性
+;       在不同 Windows 版本上不一致，改中文注释可能让文件整体导入失败。
+; ─────────────────────────────────────────────────────────────────────
+
+
+; ── ① 下发扩展配置（地址 + token）──
+; 路径含义：3rdparty -> extensions -> <扩展ID> -> 各配置项
+; 扩展侧读的是 chrome.storage.managed，优先级高于用户手填。
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\ejajjndahiklljjjpnmefhmbinaegkdc]
+"wsUrl"="wss://bridge.yourcompany.com/u/CHANGE_ME_USERNAME"
+"wsToken"="CHANGE_ME_32_CHARS_RANDOM_STRING"
+
+; 若上面这样导入后 chrome://policy 里看不到该扩展，改用下面这种写法
+; （部分 Chrome 版本要求把配置项放进 policy 子键），删掉上面那段、启用这段：
+;
+; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\ejajjndahiklljjjpnmefhmbinaegkdc\policy]
+; "wsUrl"="wss://bridge.yourcompany.com/u/CHANGE_ME_USERNAME"
+; "wsToken"="CHANGE_ME_32_CHARS_RANDOM_STRING"
+
+
+; ── ② 强制静默安装扩展（用户不可删除）──
+; 值的格式固定为：<扩展ID>;<update_url>
+; update_url 指向你自己托管的更新清单，见 server/deploy/extension-update.xml
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]
+"1"="ejajjndahiklljjjpnmefhmbinaegkdc;https://bridge.yourcompany.com/updates/browser-bridge.xml"
+
+; 若要再给多台机器装别的扩展，按序号追加即可：
+; "2"="<另一个扩展ID>;<另一个 update_url>"
+
+
+; ── ③ 可选：禁止用户手动加载其它扩展（收紧口子）──
+; 谨慎使用：会同时禁掉开发人员模式，影响研发同事。
+;
+; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+; "ExtensionInstallBlocklist"="*"
+; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallAllowlist]
+; "1"="ejajjndahiklljjjpnmefhmbinaegkdc"
+
+
+; ── ④ 可选：固定 token 轮换周期之外，禁止回退到明文 ws:// ──
+; 本项目扩展侧没有提供"允许不安全连接"的开关，这里无需额外策略；
+; 若你改用自签证书，记得把 CA 根证书推到客户端「受信任的根证书颁发机构」，
+; 否则扩展的 service worker 会直接拒连（和网页一样会校验证书）。

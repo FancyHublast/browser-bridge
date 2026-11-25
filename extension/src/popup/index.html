@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Browser Bridge</title>
+<style>
+  :root {
+    --bg: #042C53;
+    --panel: #0C447C;
+    --line: #185FA5;
+    --text: #E6F1FB;
+    --muted: #B5D4F4;
+    --dim: #85B7EB;
+    --ok: #5DCAA5;
+    --bad: #E24B4A;
+    --warn: #EF9F27;
+    --hi: #378ADD;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 380px; background: var(--bg); color: var(--text);
+    font: 12px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+
+  .hd {
+    display: flex; align-items: center; gap: 7px;
+    padding: 11px 13px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .hd .name { font-weight: 500; font-size: 13px; }
+  .hd .ver { color: var(--dim); font-size: 11px; }
+  .hd .spacer { flex: 1; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #888780; flex: none; }
+  .dot.on { background: var(--ok); }
+  .dot.off { background: var(--bad); }
+
+  .tabs { display: flex; padding: 6px 8px 0; gap: 4px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .tab {
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    padding: 6px 10px 8px; font: inherit; font-size: 12px;
+    border-radius: 6px 6px 0 0; opacity: 0.85;
+  }
+  .tab.active { background: var(--bg); opacity: 1; border-bottom: 2px solid var(--hi); padding-bottom: 6px; }
+  .tab .badge {
+    display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px;
+    background: var(--hi); color: #fff; border-radius: 9px;
+    font-size: 10px; line-height: 16px; text-align: center;
+  }
+
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  section { padding: 11px 13px; border-bottom: 1px solid rgba(24,95,165,.45); }
+  section:last-child { border-bottom: 0; }
+
+  .kv { display: flex; align-items: center; justify-content: space-between; min-height: 26px; gap: 8px; }
+  .kv > span:first-child { color: var(--dim); }
+  .kv b { font-weight: 400; color: var(--text); text-align: right; word-break: break-all; }
+
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    padding: 3px 11px; font: inherit; font-size: 11px;
+  }
+  .seg button.active { background: var(--hi); color: #fff; }
+
+  label { display: block; color: var(--dim); margin: 8px 0 4px; }
+  label:first-child { margin-top: 0; }
+  input {
+    width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
+    color: var(--text); padding: 6px 8px; font: inherit;
+  }
+  input:focus { outline: 0; border-color: var(--dim); }
+
+  .row { display: flex; gap: 7px; margin-top: 9px; align-items: center; }
+  button {
+    cursor: pointer; border-radius: 7px; font: inherit; padding: 6px 10px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  }
+  button:hover { background: var(--line); }
+  button.primary { background: var(--hi); border-color: var(--hi); color: #fff; flex: 1; }
+  button.wide { width: 100%; }
+  button.tiny { padding: 3px 7px; font-size: 11px; }
+  button.danger { color: #FBD7D7; border-color: #6B2A2A; }
+
+  .hint { color: var(--dim); font-size: 11px; margin-top: 7px; }
+  .spacer { flex: 1; }
+
+  pre {
+    margin-top: 9px; max-height: 200px; overflow: auto; white-space: pre-wrap;
+    word-break: break-all; background: #E6F1FB; color: #042C53;
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px;
+    font-size: 11px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  pre:empty { display: none; }
+
+  /* 拾取的元素列表 */
+  .pick-list { max-height: 380px; overflow-y: auto; margin: -4px 0; }
+  .pick { padding: 9px 0; border-bottom: 1px dashed var(--line); }
+  .pick:last-child { border-bottom: 0; }
+  .pick .name { font-weight: 500; font-size: 12px; color: var(--text); margin-bottom: 4px; }
+  .pick .name .auto {
+    margin-left: 6px; padding: 1px 5px; font-size: 10px; font-weight: 400;
+    background: rgba(55,138,221,0.18); color: var(--dim);
+    border-radius: 4px;
+  }
+  .pick .summary { color: var(--muted); font-size: 11px; line-height: 1.5; word-break: break-all; }
+  .pick .url { color: var(--dim); font-size: 10px; margin-top: 3px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pick .meta { margin-top: 6px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  .pick .meta .f {
+    background: rgba(55,138,221,0.16); padding: 1px 5px; border-radius: 3px;
+    color: var(--dim); font-size: 10px;
+  }
+  .pick .copy-state {
+    color: var(--ok); font-size: 10px; margin-left: 4px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .pick .copy-state.show { opacity: 1; }
+
+  .empty { color: var(--dim); text-align: center; padding: 32px 8px; font-size: 11px; line-height: 1.8; }
+  .empty .kbd { background: var(--panel); padding: 2px 6px; border-radius: 4px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <span class="dot" id="dot"></span>
+  <span class="name">Browser Bridge</span>
+  <span class="spacer"></span>
+  <span class="ver" id="ver"></span>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="conn">📡 连接</button>
+  <button class="tab" data-tab="picks">🎯 拾取的元素 <span class="badge" id="picksBadge" style="display:none">0</span></button>
+  <button class="tab" data-tab="diag">🔍 诊断</button>
+</nav>
+
+<section class="pane active" data-pane="conn">
+  <div class="kv"><span>连接</span><b id="connText">检查中…</b></div>
+  <div class="kv"><span>档位</span>
+    <span class="seg">
+      <button data-mode="light">轻量</button>
+      <button data-mode="debugger">增强</button>
+    </span>
+  </div>
+  <div class="kv"><span>抓包</span><b id="recText">未开启</b></div>
+
+  <label style="margin-top:12px">服务地址</label>
+  <input id="wsUrl" placeholder="ws://127.0.0.1:8765" spellcheck="false">
+  <label>Token</label>
+  <input id="wsToken" type="password" placeholder="与 server/config.json 保持一致" spellcheck="false">
+  <div class="row">
+    <button id="save" class="primary">保存并重连</button>
+    <button id="retry">仅重连</button>
+  </div>
+  <p class="hint">
+    扩展连的是 <b>WebSocket 端口 8765</b>（本地服务默认监听 <code>127.0.0.1:8765</code>）。<br>
+    <b>8766（路径 /mcp）是给 agent 的 HTTP 端口，填这里会连不上</b>，报 <code>code=1006</code>。<br>
+    要部署到内网/公网服务器，把地址换成 <code>wss://你的域名</code> 并务必设置 Token ——
+    那等于把你的浏览器挂到网络上。
+  </p>
+</section>
+
+<section class="pane" data-pane="picks">
+  <div id="pickList"></div>
+  <div class="row" id="pickBottom" style="display:none">
+    <button id="pickCopyAll" class="tiny">复制全部为 JSON</button>
+    <button id="pickClear" class="tiny danger">清空</button>
+    <span class="spacer"></span>
+    <span class="hint" style="margin:0">共 <b id="picksTotal">0</b> 条</span>
+  </div>
+  <div class="empty" id="pickEmpty">
+    <p>还没有拾取的元素。</p>
+    <p style="margin-top:8px">在页面上按 <span class="kbd">Alt+Shift+A</span> 进入拾取模式</p>
+    <p style="margin-top:2px">点 <span class="kbd">BB 球</span> 面板上的「拾取元素」也行</p>
+  </div>
+</section>
+
+<section class="pane" data-pane="diag">
+  <button id="probe" class="wide">自测：读取当前页面</button>
+  <pre id="out"></pre>
+</section>
+
+<script src="index.js"></script>
+</body>
+</html>

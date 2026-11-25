@@ -1,0 +1,33 @@
+{
+  "_说明": [
+    "两种接入方式，按场景选一种，合并进 agent 的 MCP 配置（WorkBuddy 是 ~/.workbuddy/mcp.json）。",
+    "",
+    "【推荐 · 多会话共用】直接用下面这份 mcpServers（streamableHttp）。",
+    "  为什么推荐：stdio 模式下每个 agent 会话都会拉起自己的进程去抢 8765 端口，",
+    "  只能有一个成功、其余 exit(2) —— 所以第二个会话里 browser_* 工具会显示不可用。",
+    "  改成 HTTP 后所有会话指向同一个常驻实例，不再抢端口。",
+    "  前提：先启动常驻服务 server\\start-http-server.bat（或装成开机自启）。",
+    "",
+    "【单会话 / 临时用】取文件末尾 _stdio_单会话_备选 里那段，替换掉下面的 http 配置。",
+    "",
+    "把 <解压位置> 换成实际路径（JSON 里反斜杠要写两个，例如 D:\\\\tools）。",
+    "合并时请把 _说明 与 _stdio_单会话_备选 这两个键删掉。"
+  ],
+
+  "mcpServers": {
+    "browser-bridge": {
+      "type": "streamableHttp",
+      "url": "http://127.0.0.1:8766/mcp",
+      "timeout": 60000
+    }
+  },
+
+  "_stdio_单会话_备选": {
+    "browser-bridge": {
+      "command": "<解压位置>\\browser-bridge\\server\\.venv\\Scripts\\python.exe",
+      "args": [
+        "<解压位置>\\browser-bridge\\server\\mcp_server.py"
+      ]
+    }
+  }
+}

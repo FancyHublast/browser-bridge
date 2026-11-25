@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>BB-OS-PROBE</title>
+<style>
+  body { font: 14px/1.7 "Microsoft YaHei", sans-serif; margin: 24px; max-width: 760px; }
+  h1 { font-size: 18px; }
+  input { font-size: 18px; padding: 8px 10px; width: 420px; border: 2px solid #888; border-radius: 6px; }
+  input:focus { border-color: #2a7; outline: none; }
+  table { border-collapse: collapse; margin-top: 14px; }
+  td, th { border: 1px solid #ccc; padding: 4px 12px; text-align: left; }
+  #counts b { color: #c33; font-size: 17px; }
+  .note { color: #666; }
+</style>
+</head>
+<body>
+<h1>系统级输入 vs CDP 输入 —— DOM 事件计数探针</h1>
+<p class="note">
+  页面载入时自动聚焦输入框。之后由外部分别用「系统级 SendInput」和「CDP dispatchKeyEvent(char)」输入同样的字符串，
+  再回读下面的计数 —— 关键看 <b>keydown 次数</b>：
+  真实键盘输入必然产生成对的 keydown/keyup；而 CDP 的 char 事件**一个都不产生**。
+</p>
+
+<p><input id="type-target" placeholder="等待输入…" autofocus></p>
+
+<table id="counts">
+  <tr><th></th><th>次数</th></tr>
+  <tr><td>keydown</td><td><b id="c-keydown">0</b></td></tr>
+  <tr><td>keyup</td><td><b id="c-keyup">0</b></td></tr>
+  <tr><td>beforeinput</td><td><b id="c-beforeinput">0</b></td></tr>
+  <tr><td>input</td><td><b id="c-input">0</b></td></tr>
+  <tr><td>paste</td><td><b id="c-paste">0</b></td></tr>
+</table>
+
+<p>当前值：<b id="c-value">(空)</b></p>
+<p>最近 8 次 keydown 的键：<span id="c-keys" class="note">—</span></p>
+
+<script>
+  var C = { keydown: 0, keyup: 0, beforeinput: 0, input: 0, paste: 0 };
+  var keys = [];
+  function bump(k) {
+    C[k]++;
+    var el = document.getElementById('c-' + k);
+    if (el) el.textContent = C[k];
+  }
+  var el = document.getElementById('type-target');
+  el.addEventListener('keydown', function (e) {
+    bump('keydown');
+    keys.push((e.key === ' ' ? '␣' : e.key) + '(vk' + e.keyCode + ')');
+    if (keys.length > 8) keys.shift();
+    document.getElementById('c-keys').textContent = keys.join(' ');
+  });
+  el.addEventListener('keyup', function () { bump('keyup'); });
+  el.addEventListener('beforeinput', function () { bump('beforeinput'); });
+  el.addEventListener('input', function () {
+    bump('input');
+    document.getElementById('c-value').textContent = el.value || '(空)';
+  });
+  el.addEventListener('paste', function () { bump('paste'); });
+
+  // 便于用 browser_read / browser_evaluate 一次性读出全部计数
+  window.__probe = function () {
+    return JSON.stringify({
+      counts: C,
+      value: el.value,
+      focused: document.activeElement === el,
+      title: document.title
+    });
+  };
+  window.addEventListener('load', function () { el.focus(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+# 换行符统一：Windows 开发 → Linux 部署最容易踩的坑
+# 不写这个，.py / .sh / .json 会带 CRLF 到 Linux，报 "bad interpreter" 或 JSON 解析异常。
+* text=auto eol=lf
+
+*.py        text eol=lf
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.json      text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.yml       text eol=lf
+*.sh        text eol=lf
+*.example   text eol=lf
+
+# Windows 批处理：
+#   · 与 cmd.exe 的编码约定强相关，且**必须用 GBK 存**
+#     （cmd 读 .bat 用的是系统 ANSI 代码页 936，chcp 无关；UTF-8 会把中文拆坏）
+#   · 因此标记 -text（当二进制原样存取），否则 git 的换行规范化会改动 GBK 字节序列
+#   · 文件本身已是 CRLF，不需要 git 再转换
+*.bat       -text
+*.cmd       -text
+# VBS 同 .bat：按 ANSI 读、需要 CRLF，不能让 git 做换行规范化
+*.vbs       -text
+*.ps1       text eol=crlf
+
+# 二进制、字体，别让 git 动它们
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.zip       binary
+*.gz        binary
